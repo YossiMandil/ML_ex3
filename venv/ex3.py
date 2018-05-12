@@ -44,6 +44,7 @@ class FCN:
         return h1, prob_vector
 
     def back_propogation(self, x, y, lr=0.0, param=None):
+        y = (int)(y)
         if param is None:
             h1, prob_vector = self.predict(x)
         else:
@@ -52,10 +53,10 @@ class FCN:
         w2_grad = np.outer(prob_vector, h1)
         w2_grad[y] -= h1
 
-        b2_grad = prob_vector
+        b2_grad = np.copy(prob_vector)
         b2_grad[y] -= 1
 
-        temp = prob_vector.dot(self.w2) - self.w2[y, :]
+        temp = np.copy(prob_vector).dot(self.w2) - self.w2[y, :]
         derivative = self.derivative_activation_func(self.w1.dot(x)+self.b1)
 
         b1_grad = temp*derivative
@@ -78,7 +79,7 @@ class FCN:
 
 def main(epocs= 30,lr=0.1, layer_size=200, noramlized=255.0, activation_func= (sigmoid, sigmoid_derivative)):
     train_x,train_y,test_x,test_y = load_data("train_x", "train_y", normalize=noramlized)
-    train_y.astype(int)
+    train_y = train_y.astype(int)
     nn= FCN(train_x.shape[1], layer_size, activation_func[0], activation_func[1], 10)
     num_examples = train_x.shape[0]
 
@@ -91,11 +92,15 @@ def main(epocs= 30,lr=0.1, layer_size=200, noramlized=255.0, activation_func= (s
             avg_loss += nn.back_propogation(train_x[i], train_y[i], lr, (h1, prob_vector))
             correct_pred += (prob_vector.argmax() == train_y[i])
         print "----------------------------epoc: {0}-----------------------------------".format(epoc)
-        print "avg loss: {0}\naccuracy: {1}".format(avg_loss/num_examples, correct_pred/num_examples)
-        print "----------------------------epoc: {0}-----------------------------------".format(epoc)
-
-
-
+        print "avg loss: {0}\naccuracy: {1}".format(avg_loss/num_examples, correct_pred/num_examples*100)
+    correct_pred = 0.0
+    print "++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+    print "++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+    print "++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+    for x,y in zip(test_x,test_y):
+        correct_pred += (nn.predict(x)[1].argmax() == (int)(y))
+        print "{0}, {1}".format(nn.predict(x)[1].argmax(), (int)(y))
+    print "real accuracy is: {0}".format(correct_pred/test_y.shape[0]*100)
 
 
 if __name__=='__main__':
