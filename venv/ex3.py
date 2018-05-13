@@ -1,9 +1,12 @@
 import numpy as np
+from numpy import tanh
+from time import time
 
 sigmoid= lambda x: 1/(1+np.exp(-x))
 sigmoid_derivative = lambda x: sigmoid(x) * (1-sigmoid(x))
 relU = lambda x: np.max(0, x)
 relU_derivative = lambda x: 1 if x > 0 else 0
+tanh_derivative = lambda x: 1.0 - np.square(tanh(x))
 
 
 def softmax(x):
@@ -17,7 +20,7 @@ def load_data(input,output,test_size=0.2,normalize=1.0):
     train_with_labels = np.concatenate((x, y.T), axis=1)
     np.random.shuffle(train_with_labels)
     num_examples =(int)(test_size*train_with_labels.shape[0])
-    print "num examples {0}".format(num_examples)
+    #print "num examples {0}".format(num_examples)
     # return train_x train_y test_x test_y
     return train_with_labels[0:20, 0:-1]/normalize, train_with_labels[0:20, -1], train_with_labels[20:,0:-1]/normalize,train_with_labels[20:, -1]
 
@@ -91,17 +94,48 @@ def main(epocs= 30,lr=0.1, layer_size=200, noramlized=255.0, activation_func= (s
             h1, prob_vector = nn.predict(train_x[i])
             avg_loss += nn.back_propogation(train_x[i], train_y[i], lr, (h1, prob_vector))
             correct_pred += (prob_vector.argmax() == train_y[i])
-        print "----------------------------epoc: {0}-----------------------------------".format(epoc)
-        print "avg loss: {0}\naccuracy: {1}".format(avg_loss/num_examples, correct_pred/num_examples*100)
+        #print "----------------------------epoc: {0}-----------------------------------".format(epoc)
+        #print "avg loss: {0}\naccuracy: {1}".format(avg_loss/num_examples, correct_pred/num_examples*100)
     correct_pred = 0.0
-    print "++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-    print "++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-    print "++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+    #print "++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+    #print "++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+    #print "++++++++++++++++++++++++++++++++++++++++++++++++++++++"
     for x,y in zip(test_x,test_y):
         correct_pred += (nn.predict(x)[1].argmax() == (int)(y))
-        print "{0}, {1}".format(nn.predict(x)[1].argmax(), (int)(y))
-    print "real accuracy is: {0}".format(correct_pred/test_y.shape[0]*100)
+     #   print "{0}, {1}".format(nn.predict(x)[1].argmax(), (int)(y))
+    #print "real accuracy is: {0}".format(correct_pred/test_y.shape[0]*100)
+    return correct_pred/test_y.shape[0]*100
 
 
 if __name__=='__main__':
-    main()
+    accuracy = 0
+    params = {}
+    epocs = range(30, 120, 10)
+    learning_rates = [0.1, 0.01, 0.3, 0.03, 0.5, 0.05, 0.001, 0.002, 0.005]
+    layer_size = [100, 120, 150, 180, 200, 220, 250, 300]
+    activation_functions = [(sigmoid, sigmoid_derivative), (relU, relU_derivative), (tanh, tanh_derivative)]
+    t = time()
+
+    for e in epocs:
+        for lr in learning_rates:
+            for ls in layer_size:
+                for af in activation_functions:
+                    start = time()
+                    temp_params = {"epocs": e, "lr": lr, "ls": ls, "af": af}
+                    try:
+                        temp_accuracy = main(e, lr, ls, activation_func=af)
+                    except Exception:
+                        print "+---------------------EXCEPTION!!!----------------+"
+                        print "params: {0}".format(temp_params)
+                        print "+---------------------EXCEPTION!!!----------------+"
+                        continue
+                    if temp_accuracy > accuracy:
+                        accuracy = temp_accuracy
+                        params = temp_params
+                    print "+-------------------------------------------------+"
+                    print "accuracy: {0}\nparams: {1}\ntime: {2}".format(temp_accuracy, temp_params, time()-start)
+                    print "+-------------------------------------------------+"
+    print "*********************************************"
+    print "**************and the winner is:*************"
+    print "accuracy: {0}\nparams: {1}\ntotal time: {2}".format(accuracy, params, float((time()-t)/60))
+    print "*********************************************"
