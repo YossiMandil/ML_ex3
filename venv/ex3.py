@@ -95,7 +95,7 @@ def main(epocs= 30,lr=0.1, layer_size=200, noramlized=255.0, activation_func= (s
             avg_loss += nn.back_propogation(train_x[i], train_y[i], lr, (h1, prob_vector))
             correct_pred += (prob_vector.argmax() == train_y[i])
         #print "----------------------------epoc: {0}-----------------------------------".format(epoc)
-        #print "avg loss: {0}\naccuracy: {1}".format(avg_loss/num_examples, correct_pred/num_examples*100)
+        print "avg loss: {0}".format(avg_loss/num_examples)
     correct_pred = 0.0
     #print "++++++++++++++++++++++++++++++++++++++++++++++++++++++"
     #print "++++++++++++++++++++++++++++++++++++++++++++++++++++++"
@@ -111,8 +111,8 @@ if __name__=='__main__':
     accuracy = 0
     params = {}
     epocs = range(30, 200, 25)
-    learning_rates = [0.01, 0.03, 0.05]
-    layer_size = [200, 220, 250, 300, 340]
+    learning_rates = [0.01, 0.03, 0.05, 0.08, 0.09]
+    layer_size = [200, 220, 250, 300, 320,  340]
     activation_functions = [(sigmoid, sigmoid_derivative)]
     t = time()
 
@@ -120,6 +120,7 @@ if __name__=='__main__':
         for lr in learning_rates:
             for ls in layer_size:
                 for af in activation_functions:
+                    print "+-------------------------------------------------+"
                     start = time()
                     temp_params = {"epocs": e, "lr": lr, "ls": ls, "af": af}
                     try:
@@ -132,7 +133,6 @@ if __name__=='__main__':
                     if temp_accuracy > accuracy:
                         accuracy = temp_accuracy
                         params = temp_params
-                    print "+-------------------------------------------------+"
                     print "accuracy: {0}\nparams: {1}\ntime: {2}".format(temp_accuracy, temp_params, time()-start)
                     print "+-------------------------------------------------+"
     print "*********************************************"
