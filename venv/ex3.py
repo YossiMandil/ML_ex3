@@ -110,9 +110,9 @@ def main(epocs= 30,lr=0.1, layer_size=200, noramlized=255.0, activation_func= (s
 if __name__=='__main__':
     accuracy = 0
     params = {}
-    epocs = range(30, 120, 25)
-    learning_rates = [0.1, 0.03, 0.05]
-    layer_size = [200, 220, 250, 300]
+    epocs = range(30, 200, 25)
+    learning_rates = [0.01, 0.03, 0.05]
+    layer_size = [200, 220, 250, 300, 340]
     activation_functions = [(sigmoid, sigmoid_derivative)]
     t = time()
 
