@@ -4,18 +4,22 @@ from time import time
 
 sigmoid= lambda x: 1/(1+np.exp(-x))
 sigmoid_derivative = lambda x: sigmoid(x) * (1-sigmoid(x))
-relU = lambda x: np.max(0, x)
-relU_derivative = lambda x: 1 if x > 0 else 0
+relU = lambda x: np.maximum(0, x)
+relU_derivative = lambda x: 1.0 if x > 0 else 0.0
 tanh_derivative = lambda x: 1.0 - np.square(tanh(x))
 
 
 def softmax(x):
-    return np.exp(x)/np.sum(np.exp(x))
+    a  = np.exp(x-x.max())
+    return a/a.sum()
+   # return np.exp(x)/np.sum(np.exp(x))
 
 
 
-def load_data(input,output,test_size=0.2,normalize=1.0):
+def load_data(input,output = None,test_size=0.2,normalize=1.0):
     x = np.loadtxt(input, np.float)
+    if output is None :
+        return x/normalize
     y = np.array([np.loadtxt(output, np.float)])
     train_with_labels = np.concatenate((x, y.T), axis=1)
     np.random.shuffle(train_with_labels)
@@ -35,16 +39,16 @@ class FCN:
         self.w1, self.b1, self.w2, self.b2 = self.initialize_weights_and_bias(hidden_layer_size, input_size, output_size)
 
     def initialize_weights_and_bias(self, hidden_layer_size, input_size, output_size):
-        b1 = np.array([np.random.uniform(-0.2, 0.2) for _ in range(hidden_layer_size)])
-        b2 = np.array([np.random.uniform(-0.2, 0.5) for _ in range(output_size)])
-        w1 = np.array([np.random.uniform(-0.3, 0.3) for _ in range(hidden_layer_size * input_size)]).reshape(hidden_layer_size, input_size)
-        w2 = np.array([np.random.uniform(-0.2, 0.2) for _ in range(hidden_layer_size * output_size)]).reshape(output_size, hidden_layer_size)
+        b1 = np.array([np.random.uniform(-0.08, 0.08) for _ in range(hidden_layer_size)])
+        b2 = np.array([np.random.uniform(-0.08, 0.08) for _ in range(output_size)])
+        w1 = np.array([np.random.uniform(-0.08, 0.08) for _ in range(hidden_layer_size * input_size)]).reshape(hidden_layer_size, input_size)
+        w2 = np.array([np.random.uniform(-0.08, 0.08) for _ in range(hidden_layer_size * output_size)]).reshape(output_size, hidden_layer_size)
         return w1, b1, w2, b2
 
-    def predict(self, x):
+    def predict(self, x,return_h1=True):
         h1 = self.activation_func(self.w1.dot(x)+self.b1)
         prob_vector = softmax(self.w2.dot(h1)+self.b2)
-        return h1, prob_vector
+        return h1, prob_vector if return_h1 else prob_vector
 
     def back_propogation(self, x, y, lr=0.0, param=None):
         y = (int)(y)
@@ -59,7 +63,7 @@ class FCN:
         b2_grad = np.copy(prob_vector)
         b2_grad[y] -= 1
 
-        temp = np.copy(prob_vector).dot(self.w2) - self.w2[y, :]
+        temp = prob_vector.dot(self.w2) - self.w2[y, :]
         derivative = self.derivative_activation_func(self.w1.dot(x)+self.b1)
 
         b1_grad = temp*derivative
@@ -71,19 +75,30 @@ class FCN:
 
     def update_weights(self, w1_grad, b1_grad, w2_grad, b2_grad, lr):
         self.w1 -= w1_grad * lr
-        self.b1 -= b1_grad * lr
         self.w2 -= w2_grad * lr
+        self.b1 -= b1_grad * lr
         self.b2 -= b2_grad * lr
+    def get_prob_vector(self):
+        return self.p
+
+
+
+def write_to_file(real_test_x,nn,path="test.pred"):
+    f= open(path, "w")
+    for i in range(real_test_x.shape[0]):
+        prediction = nn.predict(real_test_x[i], return_h1=False).argmax()
+        f.write(prediction)
+    f.close()
 
 
 
 
 
 
-def main(epocs= 30,lr=0.1, layer_size=200, noramlized=255.0, activation_func= (sigmoid, sigmoid_derivative)):
-    train_x,train_y,test_x,test_y = load_data("train_x", "train_y", normalize=noramlized)
+def main(epocs= 30,lr=0.1, layer_size=200, noramlized=255.0, activation_func= (sigmoid, sigmoid_derivative),print_to_file=False):
+    test_x, test_y, train_x, train_y = load_data("train_x", "train_y", normalize=noramlized)
     train_y = train_y.astype(int)
-    nn= FCN(train_x.shape[1], layer_size, activation_func[0], activation_func[1], 10)
+    nn = FCN(train_x.shape[1], layer_size, activation_func[0], activation_func[1], 10)
     num_examples = train_x.shape[0]
 
     indexes = range(train_x.shape[0])
@@ -93,21 +108,23 @@ def main(epocs= 30,lr=0.1, layer_size=200, noramlized=255.0, activation_func= (s
         for i in indexes:
             h1, prob_vector = nn.predict(train_x[i])
             avg_loss += nn.back_propogation(train_x[i], train_y[i], lr, (h1, prob_vector))
-            correct_pred += (prob_vector.argmax() == train_y[i])
+            correct_pred += (prob_vector.argmax() == int(train_y[i]))
         #print "----------------------------epoc: {0}-----------------------------------".format(epoc)
-        print "avg loss: {0}".format(avg_loss/num_examples)
+        print "avg loss: {0} in epoc: {1}".format(avg_loss/num_examples, epoc)
     correct_pred = 0.0
-    #print "++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-    #print "++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-    #print "++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-    for x,y in zip(test_x,test_y):
-        correct_pred += (nn.predict(x)[1].argmax() == (int)(y))
-     #   print "{0}, {1}".format(nn.predict(x)[1].argmax(), (int)(y))
-    #print "real accuracy is: {0}".format(correct_pred/test_y.shape[0]*100)
+    for x,y in zip(test_x, test_y):
+        correct_pred += (nn.predict(x)[1].argmax() == int(y))
+    print "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+    print "real accuracy is: {0}".format(correct_pred/test_y.shape[0]*100)
+    if print_to_file:
+        write_to_file(load_data("test_x", normalize=255.0), nn, "test.pred1")
+
     return correct_pred/test_y.shape[0]*100
 
 
 if __name__=='__main__':
+    print main(30, 0.03, 200,print_to_file=True)
+    exit(1)
     accuracy = 0
     params = {}
     epocs = range(30, 200, 25)
